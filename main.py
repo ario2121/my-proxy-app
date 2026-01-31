@@ -2,13 +2,12 @@ import flet as ft
 import socket
 import threading
 import time
-import traceback
 
-# کلاس پروکسی
 class ProxyEngine:
     def __init__(self):
         self.is_running = False
         self.port = 2080
+        self.server_sock = None
 
     def start(self):
         try:
@@ -23,8 +22,8 @@ class ProxyEngine:
                     client, _ = self.server_sock.accept()
                     threading.Thread(target=self.handle, args=(client,), daemon=True).start()
                 except: continue
-        except Exception as e:
-            self.error_msg = str(e)
+        except:
+            self.is_running = False
 
     def handle(self, client):
         backend = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -36,6 +35,7 @@ class ProxyEngine:
             for i in range(0, len(data), 77):
                 backend.sendall(data[i:i+77])
                 time.sleep(0.1)
+            
             def forward(src, dst):
                 try:
                     while self.is_running:
@@ -43,52 +43,62 @@ class ProxyEngine:
                         if not buf: break
                         dst.sendall(buf)
                 except: pass
+
             threading.Thread(target=forward, args=(backend, client), daemon=True).start()
             forward(client, backend)
         except: pass
         finally:
-            client.close()
-            backend.close()
+            try:
+                client.close()
+                backend.close()
+            except: pass
 
 engine = ProxyEngine()
 
 def main(page: ft.Page):
-    try:
-        page.title = "Proxy Debug"
-        page.theme_mode = ft.ThemeMode.DARK
-        page.vertical_alignment = ft.MainAxisAlignment.CENTER
-        page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-        
-        # المان‌های صفحه
-        status_text = ft.Text("برنامه آماده است", size=20)
-        
-        def on_toggle(e):
-            try:
-                if not engine.is_running:
-                    threading.Thread(target=engine.start, daemon=True).start()
-                    status_text.value = "پروکسی روشن شد 🟢"
-                    btn.text = "STOP"
-                else:
-                    engine.is_running = False
-                    status_text.value = "پروکسی خاموش شد 🔴"
-                    btn.text = "START"
-                page.update()
-            except Exception as ex:
-                page.add(ft.Text(f"Click Error: {str(ex)}", color="red"))
+    page.title = "Proxy v2"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    
+    status_text = ft.Text("آماده به کار", size=25, weight="bold")
+    info_text = ft.Text(f"Port: {engine.port}", size=16, color=ft.colors.GREY_400)
 
-        btn = ft.ElevatedButton("START", on_click=on_toggle, width=200, height=60)
-        
-        page.add(
-            ft.Icon(ft.icons.SETTINGS, size=50),
-            status_text,
-            ft.Text(f"Port: {engine.port}"),
-            btn
-        )
-        
-    except Exception as main_ex:
-        # اگر برنامه کرش کرد، خطا را در صفحه نشان بده
-        page.add(ft.Text(f"Startup Error:\n{traceback.format_exc()}", color="red", size=12))
+    def toggle(e):
+        if not engine.is_running:
+            threading.Thread(target=engine.start, daemon=True).start()
+            status_text.value = "روشن 🟢"
+            status_text.color = ft.colors.GREEN
+            btn.text = "STOP"
+            btn.bgcolor = ft.colors.RED_700
+        else:
+            engine.is_running = False
+            if engine.server_sock:
+                engine.server_sock.close()
+            status_text.value = "خاموش 🔴"
+            status_text.color = ft.colors.RED
+            btn.text = "START"
+            btn.bgcolor = ft.colors.BLUE_700
+        page.update()
+
+    btn = ft.ElevatedButton(
+        text="START",
+        width=220,
+        height=60,
+        bgcolor=ft.colors.BLUE_700,
+        color=ft.colors.WHITE,
+        on_click=toggle
+    )
+
+    # استفاده از نام متنی آیکون برای جلوگیری از خطا
+    page.add(
+        ft.Icon(name="settings", size=80, color=ft.colors.BLUE_200),
+        ft.Container(height=10),
+        status_text,
+        info_text,
+        ft.Container(height=30),
+        btn
+    )
 
 if __name__ == "__main__":
-    # اجرای منعطف‌تر برای اندروید
     ft.app(target=main)
