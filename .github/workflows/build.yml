@@ -1,1 +1,44 @@
+name: Build APK
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Flet
+        run: |
+          pip install flet
+
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
+      - name: Build APK
+        run: |
+          # حذف پوشه بیلد قدیمی اگر وجود داشته باشد
+          rm -rf build
+          # بیلد جدید با پاسخ خودکار به سوالات
+          yes | flet build apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: proxy-app-final
+          path: build/apk/*.apk
