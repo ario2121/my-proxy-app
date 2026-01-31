@@ -6,13 +6,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.19.0' # نسخه پایدار فلاتر
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11' # نسخه پایدار پایتون
 
       - name: Install Dependencies
         run: |
@@ -20,7 +23,7 @@ jobs:
 
       - name: Build APK
         run: |
-          # استفاده از دستور yes برای تایید خودکار نصب پیش‌نیازها
+          # استفاده از yes برای تایید خودکار سوالات موقع بیلد
           yes | flet build apk
 
       - name: Upload APK
